@@ -1,0 +1,67 @@
+啟動/關閉
+sudo service mongod start
+sudo service mongod stop
+sudo service mongod restart
+ 
+新增使用者
+use admin
+db.createUser(
+  {
+    user: "myUserAdmin",
+    pwd: "abc123",
+    roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
+  }
+)
+ 
+修改設定檔
+vi /etc/mongod.conf
+security:
+  authorization: enabled
+#仍可無身份登入，但已無權限
+ 
+net:
+  port: 27017
+#  bindIp: 127.0.0.1
+#註解bindIp才可以用IP連線，不然只會LISTEN localhost 或 127.0.0.1
+ 
+使用者登入
+mongo --port 27017 -u "myUserAdmin" -p "abc123" --authenticationDatabase "admin"
+ 
+新增其他使用者
+use test
+db.createUser(
+  {
+    user: "myTester",
+    pwd: "xyz123",
+    roles: [ { role: "readWrite", db: "test" },
+             { role: "read", db: "reporting" } ]
+  }
+)
+ 
+其他使用者登入
+mongo --port 27017 -u "myTester" -p "xyz123" --authenticationDatabase "test"
+ 
+超級使用者
+use admin
+db.createUser(
+  {
+    user: "root",
+    pwd: "root",
+    roles: [ { role: "userAdminAnyDatabase", db: "admin" },
+	{ role: "readWriteAnyDatabase", db: "admin" },
+	{ role: "dbAdminAnyDatabase", db: "admin" },
+	{ role: "clusterAdmin", db: "admin" }
+    ]
+  }
+)
+mongo --port 27017 -u "root" -p "root" --authenticationDatabase "admin"
+ 
+pymongo使用範例
+from pymongo import MongoClient
+client = MongoClient("mongodb://root:root@192.168.1.208:27017/admin")
+db = client['test']
+collection = db['user']
+ 
+collection.insert({"name":"wild hunt"})
+# mongodb 的 uri 後方要加admin，權限來自使用者設定
+

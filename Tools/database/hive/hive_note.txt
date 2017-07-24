@@ -1,0 +1,7 @@
+reference:
+PyHive:https://github.com/dropbox/PyHive
+about error:https://github.com/dropbox/PyHive
+thrift_sasl:https://github.com/cloudera/thrift_sasl
+
+install PyHive:
+sh hive_install.sh

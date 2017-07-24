@@ -1,0 +1,41 @@
+FIRST : save all links  ==>  link_.csv
+links = [link.get_attribute('href') for link in browser.find_elements_by_class_name('jobname')]
+        #links is list contain link of job
+        
+        with open('link_yes123.csv', 'r') as f:
+            f.write('\n'.join(links)+'\n')
+
+
+SECOND : open link_.csv to get and save content
+****new thread and join link to save content****
+lock = threading.Lock()                 #定義lock的物件
+th = threading.Thread(target=save_content_th, args=(link, lock, f))  
+        #定義Thread物件  參數傳入（ 執行的function, args(傳入function的參數) )
+th.start()
+th.join()
+
+def save_content_th(link, lock, f):
+	for div in divs:
+        	content += div.text.replace('\n', '').replace('\xa0', '')  #  type is str
+    
+	text = '/'.join(re.findall('object c|visual basic|\.net|[A-Za-z]+[+#]*', content, re.IGNORECASE))   
+		****lan 用 '/' 隔開****
+	f.write(text + '\n')
+
+
+THIRD : counter
+with open('yes123_job.csv', 'r') as fr:
+   
+    for line in fr:
+        
+    """每行的文章長度>0,則以'/'符號、空格拆解該篇文章。
+    並將該行的所有單字塞入set中,確保同樣的單字不會重複被塞入set中,再強制轉為list,準備轉成dictionary。"""
+        if len(line) > 0:
+            words= list(set(line.strip().split('/')))  # remove duplicate items in line
+    """只要該行的單字（key)轉為小寫後,若出現過則value+1、反之value=1"""        
+        for word in words:
+            if word.lower() in counter.keys():
+                counter[word.lower()] += 1
+            else:
+                counter[word.lower()] =  1
+

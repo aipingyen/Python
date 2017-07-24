@@ -1,0 +1,5 @@
+﻿.split()  空白 切割 ==> list
+
+.split('\n')  \n 切割  ==>  list
+
+.strip()  刪掉空白  \n  ==> str
