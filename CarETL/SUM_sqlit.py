@@ -11,20 +11,20 @@ host = 'http://www.sum.com.tw/'
 carName_list = ['VOLVO','VW','SUZUKI','SUBARU','PORSCHE','AUDI','BENZ','BMW','LEXUS','FORD','TOYOTA','MAZDA','HONDA','MITSUBISHI','NISSAN']
 
 class Redisdb:
-    host = '192.168.114.10'
+    host = '192.168.196.172'
     port = '6379'
     password = 'team1'
 
 def creatTB():
     db = sqlite3.connect("./SUM.db")
     cur = db.cursor()
-    # cur.execute("drop table SUM")
+    cur.execute("drop table SUM")
     cur.execute('''CREATE TABLE SUM
              (source text, url text, title text, brand text, model text, doors text, color text,
-             cc int, transmission text, equip text, mileage text, years int, location text, posttime text, price text,
-             certificate text, deal text, offTime )''')
+             cc int, transmission text, equip text, mileage int, years int, location text, posttime text, price int,
+             certificate text, deal int, offTime text, gasoline text)''')
     db.commit()
-creatTB()
+# creatTB()
 
 def gen_headers():
     referers = ['tw.yahoo.com', 'www.google.com', 'http://www.msn.com/zh-tw/', 'http://www.pchome.com.tw/']
@@ -82,7 +82,10 @@ def get_content(url):
     # doors
     content_dict['車門'] = formatList[3].text
     # years
-    content_dict['年份'] = infoList[1].text
+    if int(infoList[1].text) < 2008:
+        return
+    else:
+        content_dict['年份'] = int(infoList[1].text)
     # color
     content_dict['色系'] = infoList[2].text.split('色')[0]
     # location
@@ -91,6 +94,8 @@ def get_content(url):
     content_dict['型號'] = infoList[0].text.split('-')[1].strip()
     #cc
     content_dict['排氣量'] = int(infoList[3].text.split('c')[0])
+    #gasoline
+    content_dict['汽柴油'] = formatList[1].text
     # mileage
     mileage = formatList[8].text.split('.')[0]
     if mileage == '':
@@ -103,10 +108,10 @@ def get_content(url):
     match = re.match(u'已.*', price)
     if match:
         content_dict['價格'] = int(-1)
-        content_dict['是否售出'] = "Y"
+        content_dict['是否售出'] = 1
     else:
         content_dict['價格'] = float(price.replace('萬', ''))
-    content_dict['是否售出'] = "N"
+    content_dict['是否售出'] = 0
     #offTime   如果價格＝已收訂  將data刪除  之後再找到價格＝已收訂  就知道是下架時間
     content_dict['下架時間'] = ""
     #certificate
@@ -145,22 +150,22 @@ def add_to_sqlite(content_dict):
     deal = content_dict['是否售出']      #
     offTime = content_dict['下架時間']   #
     certificate = content_dict['認證']  #
-
+    gasoline = content_dict['汽柴油']
     try:
-        cursor.execute('INSERT INTO SUM VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        cursor.execute('INSERT INTO SUM VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                        (source, url, title, brand, model, doors, color, cc, transmission, equip,
-                        mileage, years, location, posttime, price, certificate, deal, offTime))
-
+                        mileage, years, location, posttime, price, certificate, deal, offTime, gasoline))
         conn.commit()
+        conn.close()
     except Exception as e:
-        print(e)
+        print("add_to_sqlite : ",e)
         conn.rollback()
 
-def check_duplicates(content_dict):
+def check_duplicates(url):
     conn = sqlite3.connect('./SUM.db')
     cursor = conn.cursor()
 
-    url = content_dict['連結']
+    # url = content_dict['連結']
 
     num = list(cursor.execute('SELECT * FROM SUM WHERE url = ? ', (url,)))
 
@@ -169,13 +174,13 @@ def check_duplicates(content_dict):
     else:
         return True
 
-def main():
-    for carName in carName_list:
-        with open('./SUM/{}.csv'.format(carName), 'r') as fr:
-            urls = fr.read().strip().split()
-            for url in urls:
-                content_dict = get_content(url)
-                add_to_sqlite(content_dict)
+# def main():
+#     for carName in carName_list:
+#         with open('./SUM/{}.csv'.format(carName), 'r') as fr:
+#             urls = fr.read().strip().split()
+#             for url in urls:
+#                 content_dict = get_content(url)
+#                 add_to_sqlite(content_dict)
 
 def gen_proxies():
     proxy_url = que.blpop('proxy_list')[1].decode('utf8')  # blpop
@@ -193,7 +198,7 @@ while que.llen('SUM_list') != 0:
     while count:
         try:
             content_dict = get_content(url)
-            if not check_duplicates(content_dict):
+            if not check_duplicates(url):
                 add_to_sqlite(content_dict)
                 break
             else:
@@ -201,14 +206,14 @@ while que.llen('SUM_list') != 0:
                 print('same car exist pass')
                 break
         except IndexError as e:
-            logger.exception(e)
+            print(e)
             count -= 1
         except (r.exceptions.ProxyError, ConnectionRefusedError) as e:
-            logger.exception(e)
+            print(e)
             proxies = gen_proxies()
         except Exception as e:
             count -= 1
-            logger.exception('url:' + url + ' count' + str(count))
+            print('url:' + url + ' count' + str(count))
     # Push to failed list
     if count == 0:
         que.lpush('mobile01_failed', url)
