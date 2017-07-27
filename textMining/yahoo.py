@@ -15,14 +15,14 @@ def jiebaContent(content):
         contents = ''
         for idx in range(len(content)):
             contents += content[idx]
-        jiebaContent = jieba.analyse.extract_tags(contents, allowPOS=['nr', 'n', 'v', 'nz', 'ns', 'vn', 'a', 'an'])
-        print("jiebaContent : ",jiebaContent)
-        return jiebaContent
+        jiebacontent = jieba.analyse.extract_tags(contents, allowPOS=['nr', 'n', 'v', 'nz', 'ns', 'vn', 'a', 'an'])
+        # print("jiebaContent : ",jiebacontent)
+        return jiebacontent
     else:
         return None
 
-def wordCount(jiebaContent):
-    for word_raw in jiebaContent:
+def wordCount(jiebacontent):
+    for word_raw in jiebacontent:
         word = word_raw.replace('\r\n', '').replace('\n', '').upper()
         if word not in normal_words:    # and sign_words
             if word in wc:
@@ -48,7 +48,7 @@ def main():
     print(count)
     sql = "select distinct(intro) from yahooNewCars_filtered ;"
     cur.execute(sql)
-
+    sentence = []
     try:
         for idx, row in enumerate(cur):
             sentence = [ line for line in row[0].split('。') if len(line) > 0 ]
@@ -56,6 +56,7 @@ def main():
             multi(sentence)
             printStr = 'now is going on ' + str(idx+1) + ',which is ' + str(math.floor((idx+1) / count * 100)) + str('% finished')
             sys.stdout.write('\r' + printStr)
+        # print(len(sentence))
 
         with open(u'./count/yahoo0724mul.csv', 'a', encoding='utf8') as fw:
             for lang, counts in wc.most_common():

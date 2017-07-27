@@ -56,7 +56,7 @@ def main():
     try:
         for idx, row in enumerate(cur):
             sentence = [ line for line in row[0].split('。') if len(line) > 0 ]
-            print(sentence)
+            # print(sentence)
             jiebaContent(sentence)
             printStr = 'now is going on ' + str(idx+1) + ',which is ' + str(math.floor((idx+1) / count * 100)) + str(
                 '% finished')
