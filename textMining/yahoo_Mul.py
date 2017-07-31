@@ -18,10 +18,18 @@ def jiebaContent(content):
             contents += content[idx]
         jiebaContent = jieba.analyse.extract_tags(contents, allowPOS=['nr', 'n', 'v', 'nz', 'ns', 'vn', 'a', 'an'])
         # print("jiebaContent ; ",jiebaContent)
-        wordCount(jiebaContent)
-        return jiebaContent
+        # wordCount(jiebaContent)
+        judgeLexical(jiebaContent)
+        # return jiebaContent
     else:
         return None
+
+def judgeLexical(jiebaContent):
+    import jieba.posseg as pseg
+    for word in jiebaContent:
+        word_pseg = pseg.cut(word)
+        for w in word_pseg:
+            print(w.flag,w.word)
 
 def wordCount(jiebaContent):
     global wc
@@ -52,18 +60,18 @@ def main():
     print(count)
     sql = "select distinct(intro) from yahooNewCars_filtered ;"
     cur.execute(sql)
-
+    import jieba.posseg as pseg
     try:
         for idx, row in enumerate(cur):
             sentence = [ line for line in row[0].split('。') if len(line) > 0 ]
             # print(sentence)
-            jiebaContent(sentence)
+            a = jiebaContent(sentence)
             printStr = 'now is going on ' + str(idx+1) + ',which is ' + str(math.floor((idx+1) / count * 100)) + str(
                 '% finished')
             sys.stdout.write('\r' + printStr)
-        with open(u'./count/yahoo0724.csv', 'a', encoding='utf8') as fw:
-            for lang, counts in wc.most_common():
-                fw.write('{},{}\n'.format(lang, counts))
+            with open(u'./count/yahoo0724.csv', 'a', encoding='utf8') as fw:
+                for lang, counts in wc.most_common():
+                    fw.write('{},{}\n'.format(lang, counts))
 
     except Exception as e:
         print("connMobile01 error in row{} , :".format(idx+1), e)
