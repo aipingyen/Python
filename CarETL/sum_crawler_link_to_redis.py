@@ -7,10 +7,6 @@ import redis
 import time
 import pymysql
 import logging
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-
 
 def push_to_redis(links):
     for link in links:
@@ -22,25 +18,8 @@ def check_data_in_mysql(url):
     else:
         return False
 
+#將所有的request請求放到同一的fun處理Exception
 def connect_until_success(url):
-    referers = ['tw.yahoo.com', 'www.google.com', 'http://www.msn.com/zh-tw/', 'http://www.pchome.com.tw/']
-    user_agents = [
-        'Mozilla/5.0 (X11; CrOS x86_64 8172.45.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.64 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9',
-        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36',
-        'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)']
-
-    header = {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Encoding': 'gzip, deflate, sdch',
-        'Accept-Language': 'en-US,en;q=0.8',
-        'Cache-Control': 'max-age=0',
-        'Connection': 'keep-alive',
-        'Cookie': 'PHPSESSID=9d14keg2t9rr1cmovr3p6k63k3; _gat_UA-1515188-3=1; _dc_gtm_UA-34980571-20=1; __asc=c661c32d15cd4d990e10bbd0037; __auc=c661c32d15cd4d990e10bbd0037; _ga=GA1.3.325420990.1498219648; _gid=GA1.3.1025657883.1498219648; _TUCI=sessionNumber+1000&ECId+155&hostname+www.sum.com.tw&pageView+4000; _TUCI_T=sessionNumber+17340&pageView+17340; _TUCS=1',
-        'Host': 'www.sum.com.tw',
-        'Upgrade-Insecure-Requests': '1'
-    }
-
     header['User-Agent'] = user_agents[randint(0, len(user_agents) - 1)]
     header['Referer'] = referers[randint(0, len(referers) - 1)]
     count = 0
@@ -104,17 +83,15 @@ def main():
     global existing_data
     existing_data = []
     sql = "select url from {} where source ='{}' and (deal != '1' or deal is null)"
-    c.execute(sql.format(mySQL_project.backup_table, 'SUM'))
+    c.execute(sql.format(mySQL_project.backup_table, 'SUM'))         #找出未成交的url
     for row in c:
         existing_data.append(row)
     conn.commit()
     conn.close()
 
-
     carName_list = ['VOLVO', 'VW', 'SUZUKI', 'SUBARU', 'PORSCHE', 'AUDI', 'BENZ', 'BMW', 'LEXUS', 'FORD', 'TOYOTA',
                     'MAZDA', 'HONDA', 'MITSUBISHI', 'NISSAN']
     global que
-    que = redis.StrictRedis(host=Redisdb.host, port=Redisdb.port, db=0, password=Redisdb.password)
     que.delete('sum_url')
     for carName in carName_list:
         href_list = get_pages(carName)
@@ -125,4 +102,26 @@ def main():
 
 
 if __name__ == '__main__':
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    que = redis.StrictRedis(host=Redisdb.host, port=Redisdb.port, db=0, password=Redisdb.password)
+
+    referers = ['tw.yahoo.com', 'www.google.com', 'http://www.msn.com/zh-tw/', 'http://www.pchome.com.tw/']
+    user_agents = [
+        'Mozilla/5.0 (X11; CrOS x86_64 8172.45.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.64 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36',
+        'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)']
+    header = {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, sdch',
+        'Accept-Language': 'en-US,en;q=0.8',
+        'Cache-Control': 'max-age=0',
+        'Connection': 'keep-alive',
+        'Cookie': 'PHPSESSID=9d14keg2t9rr1cmovr3p6k63k3; _gat_UA-1515188-3=1; _dc_gtm_UA-34980571-20=1; __asc=c661c32d15cd4d990e10bbd0037; __auc=c661c32d15cd4d990e10bbd0037; _ga=GA1.3.325420990.1498219648; _gid=GA1.3.1025657883.1498219648; _TUCI=sessionNumber+1000&ECId+155&hostname+www.sum.com.tw&pageView+4000; _TUCI_T=sessionNumber+17340&pageView+17340; _TUCS=1',
+        'Host': 'www.sum.com.tw',
+        'Upgrade-Insecure-Requests': '1'
+    }
+
     main()

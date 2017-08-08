@@ -1,33 +1,20 @@
 import requests as r
 from  bs4 import BeautifulSoup
-import math
-import re
 import random
 import time
 import redis
-from random import randint
-import logging
-
-from lib.toolbox import gen_header
-header_str = 'User-Agent:Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36'
-HEADER = gen_header(header_str)
-
-referers = ['tw.yahoo.com', 'www.google.com', 'http://www.msn.com/zh-tw/', 'http://www.pchome.com.tw/']
-user_agents = [
-    'Mozilla/5.0 (X11; CrOS x86_64 8172.45.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.64 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9',
-    'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36',
-    'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)']
-
-carName_list = ['NISSAN','TOYOTA','MITSUBISHI','HONDA','FORD','MERCEDES BENZ','BMW','LEXUS','VOLKSWAGEN','MAZDA']
-host = 'https://www.mobile01.com/'
-
-class Redisdb:
-    host = '192.168.196.172'
-    port = '6379'
-    password = 'team1'
+from dbconfig import Redisdb, mySQL_project
+import multiprocessing
+from toolbox import gen_header
 
 # def gen_headers():
+#     from random import randint
+#     referers = ['tw.yahoo.com', 'www.google.com', 'http://www.msn.com/zh-tw/', 'http://www.pchome.com.tw/']
+#     user_agents = [
+#         'Mozilla/5.0 (X11; CrOS x86_64 8172.45.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.64 Safari/537.36',
+#         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9',
+#         'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36',
+#         'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)']
 #     headers = {'User-Agent': user_agents[randint(0, len(user_agents) - 1)],
 #                'Referer': referers[randint(0, len(referers) - 1)]}
 #     return headers
@@ -41,11 +28,10 @@ def carName_url():   #外網所有連結
     for idx in name:
         if idx.text.upper() in carName_list:
             car_url.append(host+idx['href'])
-    print("car_url : ", len(car_url), car_url)
+    # print("car_url : ", len(car_url), car_url)
     return car_url
 
 def getPages(url):  #外網的url  共15個url
-
     count = 5       # retry 5 times
     while count:
         res = r.get(url, headers=HEADER)
@@ -55,14 +41,14 @@ def getPages(url):  #外網的url  共15個url
             carName = soup.select(".main > h2")[1].text.upper()  # 此車種名稱
             idx = len(pageTag)
             pages = int(pageTag[(idx - 1)].text)               # 此車種的頁數
-            print(carName + " , carPage: ", pages)
+            # print(carName + " , carPage: ", pages)
             time.sleep(int(random.random() * 3 + 1))
             break
         else:
             print('Cannot retrieve links Retry: {} '.format(6 - count))
+            # ('at url {} indexError happened: {}'.format(url, e))**********************
             count -= 1
             time.sleep(int(random.random() * 3 + 1))
-
     return pages
 
 def getURL(url, page):  #用range(pages) 將內頁網址擷取  並使用re.match篩選
@@ -107,7 +93,6 @@ def push_url(url):
     for page in range(1, pages + 1):
         total_url = getURL(url, page)                 #catch total_url
         pageCount += 1                              # 計算此車種的頁數
-        # logger = logging.getLogger(__name__)
         count = 5
         try:
             while count:
@@ -119,17 +104,18 @@ def push_url(url):
         except Exception as e:
             time.sleep(int(random.random() * 3 + 1))
             count -= 1
-            # logger.exception(url + 'count=' + str(count))
-            print(url + 'count=' + str(count))
+            print("push_url : " + url + 'count=' + str(count))
     print("TotalPage_to : ", pageCount)
     print(page_list)
     print(len(page_list))
 
-import multiprocessing
-
-url_list = []
-
 if __name__ == "__main__":
+    header_str = 'User-Agent:Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36'
+    HEADER = gen_header(header_str)
+
+    carName_list = ['NISSAN','TOYOTA','MITSUBISHI','HONDA','FORD','MERCEDES BENZ','BMW','LEXUS','VOLKSWAGEN','MAZDA']
+    host = 'https://www.mobile01.com/'
+    url_list = []
     for url in carName_url():
         url_list.append(url)
         if len(url_list) == 1:
@@ -138,8 +124,4 @@ if __name__ == "__main__":
             pool.close()
             url_list = []
         else:
-            print(len(url_list))
-
-    # pool = multiprocessing.Pool(processes=8)
-    # res = pool.map(push_url,carName_url())
-    # pool.close()
+            print("len(url_list) : ",len(url_list))

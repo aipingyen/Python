@@ -9,25 +9,7 @@ import multiprocessing
 from pymongo import MongoClient
 from datetime import datetime
 import math
-
-referers = ['tw.yahoo.com', 'www.google.com', 'http://www.msn.com/zh-tw/', 'http://www.pchome.com.tw/']
-user_agents = ['Mozilla/5.0 (X11; CrOS x86_64 8172.45.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.64 Safari/537.36',
-               'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9',
-               'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36',
-               'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)']
-cookie = 'PHPSESSID=5rvg4cdkfpbd9skuntk0ifo2r2; _gat=1; _ga=GA1.3.815060608.1496624322; _gid=GA1.3.657905158.1496852224'
-
-carName_list = ['PORSCHE','NISSAN','TOYOTA','MITSUBISHI','HONDA','FORD','AUDI','MERCEDES BENZ','BMW','LEXUS','VOLKSWAGEN','MAZDA','SUBARU','SUZUKI','VOLVO']
-
-
-class Redisdb:
-    host = '192.168.196.172'
-    port = '6379'
-    password = 'team1'
-    
-class mongodb:
-    host = '10.120.37.11'
-    port = 27017
+from dbconfig import Redisdb, mySQL_project, mongodb
 
 def gen_proxies():
     proxy_url = que.blpop('proxy_list')[1].decode('utf8')
@@ -35,7 +17,7 @@ def gen_proxies():
     print(proxy_url)
     return proxy_gen
 
-#將所有的request請球丟到同一的fun處理Exception
+#將所有的request請求放到同一的fun處理Exception
 def connect_until_success(url):
     import requests.exceptions
     # count = 0
@@ -49,7 +31,7 @@ def connect_until_success(url):
         except requests.exceptions.ConnectionError:
             # count += 1
             pass
-        except IndexError as e:   #
+        except IndexError as e:
             print(e)
             pass
         except (requests.exceptions.ProxyError, ConnectionRefusedError) as e:
@@ -74,16 +56,14 @@ def gen_headers():
 #     db.commit()
 # # creatDB()
 
-
-
 #num of totalArticle
 def reply_num(url):
     contentURL = url+"&p="+str(contentPage(url))
-#     print(contentPage(url))
+    # print(contentPage(url))
     reply_res = connect_until_success(contentURL)
     soup = BeautifulSoup(reply_res.text,'lxml')
     reply_no = int(len(soup.select('main > article')))
-#     print(reply_no)
+    # print(reply_no)
     reply_id = int(soup.select('.date')[reply_no-1].text.split('\xa0')[2][1:])-1
     return reply_id
 
@@ -94,7 +74,6 @@ def contentPage(url):
     contentPage = int(soup.select_one(".numbers").text.split('共')[1].split('頁')[0])
     # print("page : ",contentPage)
     return contentPage
-
 
 #content to innerURL
 def getSubContent(url):
@@ -148,8 +127,8 @@ def getSubContent(url):
     reply_json = json.dumps(replies)
     return reply_json
 
-#add to sqlite
-def add_to_mongo(collection, url, reply_no):
+#add to sqlite/mongodb
+def add_to_mongodb(collection, url, reply_no):
 
     res = connect_until_success(url)
     soup = BeautifulSoup(res.text, 'lxml')
@@ -181,10 +160,8 @@ def add_to_mongo(collection, url, reply_no):
     comment = {'url': url, 'title': title, 'author': author,
                'tm': datetime.fromtimestamp(math.floor(float(tm))), 'Board': Board, 'content': content,
                'reply_no': reply_no, 'replies': json.loads(replies)}
-
-
     try:
-        #Insert to mongoDB
+        #Insert to mongodb
         collection.insert_one(comment)
 
         #Insert to sqlite
@@ -193,10 +170,10 @@ def add_to_mongo(collection, url, reply_no):
 
         # print(comment)
     except Exception as e:
-        print("add_to_mongo : ", e)
+        print("add_to_mongodb : ", e)
 
-#更新到sqlite
-def update_to_mongo(collection,url, reply_no):
+#更新到sqlite/mongodb
+def update_to_mongodb(collection,url, reply_no):
     replies = getSubContent(url)
     # print("replies : ", replies)
     try:
@@ -208,23 +185,22 @@ def update_to_mongo(collection,url, reply_no):
         # conn.commit()
         # conn.close()
     except Exception as e:
-        print("failed: update_to_mongo : ", e)
+        print("failed: update_to_mongodb : ", e)
         # conn.rollback()
 
 #檢查是否在sqlite
 def check_duplicates(collection,url):
-
     new_reply_no = reply_num(url)
     old_article = collection.find_one({'url': 'url'})
 
     if old_article:
         old_reply_no = old_article['reply_no']
         if new_reply_no != old_reply_no :
-            return (2, new_reply_no)
+            return (2, new_reply_no)        #比較回文數是否有更新
         else:
             return (3, new_reply_no)
     else:
-        return (1, new_reply_no)
+        return (1, new_reply_no)            #新增評論jsonObj
 
 def main():
     client = MongoClient(mongodb.host, mongodb.port)
@@ -232,16 +208,16 @@ def main():
     while que.llen('mobile01_list') != 0:
         url = que.blpop('mobile01_list')[1].decode('utf8')
         count = 2
-        print(url)
+        # print(url)
         while count:
             try:
                 is_dulicate, reply_no = check_duplicates(collection, url)
 
                 if is_dulicate == 1:
-                    add_to_mongo(collection, url, reply_no)
+                    add_to_mongodb(collection, url, reply_no)
                     break
                 elif is_dulicate == 2:
-                    update_to_mongo(collection,url, reply_no)
+                    update_to_mongodb(collection,url, reply_no)
                     break
                 else:
                     print('same car exist pass')
@@ -251,6 +227,17 @@ def main():
                 count -= 1
 
 if __name__ == "__main__":
+    referers = ['tw.yahoo.com', 'www.google.com', 'http://www.msn.com/zh-tw/', 'http://www.pchome.com.tw/']
+    user_agents = [
+        'Mozilla/5.0 (X11; CrOS x86_64 8172.45.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.64 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36',
+        'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)']
+    cookie = 'PHPSESSID=5rvg4cdkfpbd9skuntk0ifo2r2; _gat=1; _ga=GA1.3.815060608.1496624322; _gid=GA1.3.657905158.1496852224'
+
+    carName_list = ['PORSCHE', 'NISSAN', 'TOYOTA', 'MITSUBISHI', 'HONDA', 'FORD', 'AUDI', 'MERCEDES BENZ', 'BMW',
+                    'LEXUS', 'VOLKSWAGEN', 'MAZDA', 'SUBARU', 'SUZUKI', 'VOLVO']
+
     que = redis.StrictRedis(host=Redisdb.host, port=Redisdb.port, db=0, password=Redisdb.password)
     results = []
     multiprocessing.freeze_support()  # Windows 平台要加上这句，避免 RuntimeError
