@@ -8,9 +8,10 @@ import time
 import pymysql
 import logging
 
-def push_to_redis(links):
+#download urls
+def push_to_redis(links):              #接收list  以element push to redis list
     for link in links:
-        que.rpush('sum_url', link)
+        que.rpush('sum_url', link)     #push list to redis
 
 def check_data_in_mysql(url):
     if url in existing_data:
@@ -52,7 +53,6 @@ def get_pages(carName):
 def car_url(carName, pages):
     href_list = []
     host = 'http://www.sum.com.tw/'
-    count = 5
     for page in range(1, pages + 1):
         printstring = ('*****now is crawling ' + carName + ' at page: ' + str(page) + '*****')
         sys.stdout.write('\r' + printstring )
@@ -61,8 +61,8 @@ def car_url(carName, pages):
         soup = BeautifulSoup(res.text,'lxml')
         car_href = soup.select('li.carInfo > strong > a')
         for i, idx in enumerate(car_href):
-            if i %2 ==1:
-                if not check_data_in_mysql(host+idx['href']):
+            if i %2 ==1:  #網站架構問題  挑出奇數個的id
+                if not check_data_in_mysql(host+idx['href']):    #將url丟到此fun檢查是否與相同  有就是false
                     href_list.append(host+idx['href'])
 
     return href_list
@@ -72,13 +72,12 @@ def main():
     while count < 50:
         try:
             conn = pymysql.connect(host=mySQL_project.IP, port=3306,
-                                   user='team1', passwd=mySQL_project.passwd, db='team1', charset='utf8')
+                                   user='team1', passwd=mySQL_project.passwd, db='team1', charset='utf8')    #連線到mysql取出已在資料庫的url
             break
         except pymysql.OperationalError:
             count += 1
             if count == 50:
                 logger.error('at data getting mysql server cannot connect')
-    #     cur.set_character_set('utf8')
     c = conn.cursor()
     global existing_data
     existing_data = []
@@ -91,8 +90,7 @@ def main():
 
     carName_list = ['VOLVO', 'VW', 'SUZUKI', 'SUBARU', 'PORSCHE', 'AUDI', 'BENZ', 'BMW', 'LEXUS', 'FORD', 'TOYOTA',
                     'MAZDA', 'HONDA', 'MITSUBISHI', 'NISSAN']
-    global que
-    que.delete('sum_url')
+    que.delete('sum_url')                                           #將舊的list of redis清空
     for carName in carName_list:
         href_list = get_pages(carName)
         push_to_redis(href_list)

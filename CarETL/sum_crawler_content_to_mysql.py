@@ -272,7 +272,7 @@ def main():
     existing_data = get_database_data()
     # carName_list = ['VOLVO','VW','SUZUKI','SUBARU','PORSCHE','AUDI','BENZ','BMW','LEXUS','FORD','TOYOTA','MAZDA','HONDA','MITSUBISHI','NISSAN']
     global que
-    que = redis.StrictRedis(host=Redisdb.host, port=Redisdb.port, db=0, password=Redisdb.password)  #
+    que = redis.StrictRedis(host=Redisdb.host, port=Redisdb.port, db=0, password=Redisdb.password)
     que.delete('sum_failed')
     # proxy = gen_proxies()
     while True:
