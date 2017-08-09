@@ -19,6 +19,10 @@ from toolbox import gen_header
 #                'Referer': referers[randint(0, len(referers) - 1)]}
 #     return headers
 
+header_str = 'User-Agent:Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36'
+HEADER = gen_header(header_str)
+host = 'https://www.mobile01.com/'
+
 def carName_url():   #外網所有連結
     root_url = 'https://www.mobile01.com/forumlist.php?f=21'
     res = r.get(root_url,headers=HEADER)
@@ -26,27 +30,26 @@ def carName_url():   #外網所有連結
     name = soup.select('.subject-text > a')
     car_url = []
     for idx in name:
-        if idx.text.upper() in carName_list:
+        if idx.text.upper() in carName_list:  #如果有在lst裡面才將外網url截取下來
             car_url.append(host+idx['href'])
     # print("car_url : ", len(car_url), car_url)
     return car_url
 
-def getPages(url):  #外網的url  共15個url
+def getPages(url):  #外網的url  共10個url
     count = 5       # retry 5 times
     while count:
         res = r.get(url, headers=HEADER)
         if res.status_code == 200:
             soup = BeautifulSoup(res.text, 'lxml')
             pageTag = soup.select('.pagination > a ')
-            carName = soup.select(".main > h2")[1].text.upper()  # 此車種名稱
+            # carName = soup.select(".main > h2")[1].text.upper()  # 此車種名稱
             idx = len(pageTag)
             pages = int(pageTag[(idx - 1)].text)               # 此車種的頁數
-            # print(carName + " , carPage: ", pages)
+            # print(carName + " , carPage: " + pages)
             time.sleep(int(random.random() * 3 + 1))
             break
         else:
             print('Cannot retrieve links Retry: {} '.format(6 - count))
-            # ('at url {} indexError happened: {}'.format(url, e))**********************
             count -= 1
             time.sleep(int(random.random() * 3 + 1))
     return pages
@@ -77,8 +80,7 @@ def getURL(url, page):  #用range(pages) 將內頁網址擷取  並使用re.matc
                 count -= 1
                 time.sleep(int(random.random() * 3 + 1))
         except Exception as e:
-            print(
-                'Cannot retrieve links from page {} Retry: {} Error: {}'.format(page, 6 - count, e))
+            print('Cannot retrieve links from page {} Retry: {} Error: {}'.format(page, 6 - count, e))
             count -= 1
             time.sleep(int(random.random() * 3 + 1))
     if count == 0:
@@ -96,10 +98,12 @@ def push_url(url):
         count = 5
         try:
             while count:
-                for inner_url in total_url:  #for idx, url in enumerate(urls):
+                # for inner_url in total_url:  #for idx, url in enumerate(urls):
                     # print(inner_url)
-                    que = redis.StrictRedis(host=Redisdb.host, port=Redisdb.port, db=0, password=Redisdb.password)#
-                    que.lpush('mobile01_list', inner_url)
+                    # que = redis.StrictRedis(host=Redisdb.host, port=Redisdb.port, db=0, password=Redisdb.password)#
+                    # que.lpush('mobile01_list', inner_url)
+                with open('mobile01.csv', 'a',encoding='utf8') as fw:
+                        fw.write('\n'.join(total_url))
                 break
         except Exception as e:
             time.sleep(int(random.random() * 3 + 1))
@@ -110,18 +114,13 @@ def push_url(url):
     print(len(page_list))
 
 if __name__ == "__main__":
-    header_str = 'User-Agent:Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36'
-    HEADER = gen_header(header_str)
-
     carName_list = ['NISSAN','TOYOTA','MITSUBISHI','HONDA','FORD','MERCEDES BENZ','BMW','LEXUS','VOLKSWAGEN','MAZDA']
-    host = 'https://www.mobile01.com/'
+
     url_list = []
     for url in carName_url():
         url_list.append(url)
-        if len(url_list) == 1:
-            pool = multiprocessing.Pool(processes=8)
-            res = pool.map(push_url,url_list)
-            pool.close()
-            url_list = []
-        else:
-            print("len(url_list) : ",len(url_list))
+        pool = multiprocessing.Pool(processes=8)
+        res = pool.map(push_url,url_list)        #參數只能放list
+        pool.close()
+        url_list = []
+
