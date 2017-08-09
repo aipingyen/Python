@@ -8,6 +8,28 @@ import time
 import pymysql
 import logging
 
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+que = redis.StrictRedis(host=Redisdb.host, port=Redisdb.port, db=0, password=Redisdb.password)
+
+referers = ['tw.yahoo.com', 'www.google.com', 'http://www.msn.com/zh-tw/', 'http://www.pchome.com.tw/']
+user_agents = [
+    'Mozilla/5.0 (X11; CrOS x86_64 8172.45.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.64 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9',
+    'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36',
+    'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)']
+header = {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, sdch',
+    'Accept-Language': 'en-US,en;q=0.8',
+    'Cache-Control': 'max-age=0',
+    'Connection': 'keep-alive',
+    'Cookie': 'PHPSESSID=9d14keg2t9rr1cmovr3p6k63k3; _gat_UA-1515188-3=1; _dc_gtm_UA-34980571-20=1; __asc=c661c32d15cd4d990e10bbd0037; __auc=c661c32d15cd4d990e10bbd0037; _ga=GA1.3.325420990.1498219648; _gid=GA1.3.1025657883.1498219648; _TUCI=sessionNumber+1000&ECId+155&hostname+www.sum.com.tw&pageView+4000; _TUCI_T=sessionNumber+17340&pageView+17340; _TUCS=1',
+    'Host': 'www.sum.com.tw',
+    'Upgrade-Insecure-Requests': '1'
+}
+
 #download urls
 def push_to_redis(links):              #接收list  以element push to redis list
     for link in links:
@@ -100,26 +122,4 @@ def main():
 
 
 if __name__ == '__main__':
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-
-    que = redis.StrictRedis(host=Redisdb.host, port=Redisdb.port, db=0, password=Redisdb.password)
-
-    referers = ['tw.yahoo.com', 'www.google.com', 'http://www.msn.com/zh-tw/', 'http://www.pchome.com.tw/']
-    user_agents = [
-        'Mozilla/5.0 (X11; CrOS x86_64 8172.45.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.64 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9',
-        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36',
-        'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)']
-    header = {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Encoding': 'gzip, deflate, sdch',
-        'Accept-Language': 'en-US,en;q=0.8',
-        'Cache-Control': 'max-age=0',
-        'Connection': 'keep-alive',
-        'Cookie': 'PHPSESSID=9d14keg2t9rr1cmovr3p6k63k3; _gat_UA-1515188-3=1; _dc_gtm_UA-34980571-20=1; __asc=c661c32d15cd4d990e10bbd0037; __auc=c661c32d15cd4d990e10bbd0037; _ga=GA1.3.325420990.1498219648; _gid=GA1.3.1025657883.1498219648; _TUCI=sessionNumber+1000&ECId+155&hostname+www.sum.com.tw&pageView+4000; _TUCI_T=sessionNumber+17340&pageView+17340; _TUCS=1',
-        'Host': 'www.sum.com.tw',
-        'Upgrade-Insecure-Requests': '1'
-    }
-
     main()

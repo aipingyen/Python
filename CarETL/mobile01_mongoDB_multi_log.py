@@ -15,6 +15,11 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+carName_list = ['PORSCHE', 'NISSAN', 'TOYOTA', 'MITSUBISHI', 'HONDA', 'FORD', 'AUDI', 'MERCEDES BENZ', 'BMW',
+                'LEXUS', 'VOLKSWAGEN', 'MAZDA', 'SUBARU', 'SUZUKI', 'VOLVO']
+
+que = redis.StrictRedis(host=Redisdb.host, port=Redisdb.port, db=0, password=Redisdb.password)
+
 def gen_proxies():
     proxy_url = que.blpop('proxy_list')[1].decode('utf8')
     proxy_gen = {'http': proxy_url, 'https': proxy_url}
@@ -48,7 +53,14 @@ def connect_until_success(url):
     return res
 
 def gen_headers():
-    headers = {'User-Agent': user_agents[randint(0, len(user_agents) - 1)]}
+    referers = ['tw.yahoo.com', 'www.google.com', 'http://www.msn.com/zh-tw/', 'http://www.pchome.com.tw/']
+    user_agents = [
+        'Mozilla/5.0 (X11; CrOS x86_64 8172.45.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.64 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36',
+        'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)']
+    headers = {'User-Agent': user_agents[randint(0, len(user_agents) - 1)],
+               'Referer': referers[randint(0, len(referers) - 1)]}
     return headers
 
 # Create db
@@ -231,18 +243,7 @@ def main():
                 count -= 1
 
 if __name__ == "__main__":
-    referers = ['tw.yahoo.com', 'www.google.com', 'http://www.msn.com/zh-tw/', 'http://www.pchome.com.tw/']
-    user_agents = [
-        'Mozilla/5.0 (X11; CrOS x86_64 8172.45.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.64 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9',
-        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36',
-        'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)']
-    cookie = 'PHPSESSID=5rvg4cdkfpbd9skuntk0ifo2r2; _gat=1; _ga=GA1.3.815060608.1496624322; _gid=GA1.3.657905158.1496852224'
 
-    carName_list = ['PORSCHE', 'NISSAN', 'TOYOTA', 'MITSUBISHI', 'HONDA', 'FORD', 'AUDI', 'MERCEDES BENZ', 'BMW',
-                    'LEXUS', 'VOLKSWAGEN', 'MAZDA', 'SUBARU', 'SUZUKI', 'VOLVO']
-
-    que = redis.StrictRedis(host=Redisdb.host, port=Redisdb.port, db=0, password=Redisdb.password)
     results = []
     multiprocessing.freeze_support()  # Windows 平台要加上这句，避免 RuntimeError
     pool = multiprocessing.Pool()
